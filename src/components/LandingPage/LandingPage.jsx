@@ -27,20 +27,47 @@ function LandingPage() {
     const fetchGames = async () => {
       const options = {
         method: 'GET',
-        url: 'https://baseball4.p.rapidapi.com/v1/mlb/schedule',
-        params: { date: '2024-05-20' },
+        url: 'https://odds-api1.p.rapidapi.com/odds',
+        params: {
+          matchid: 'id1500446680671',
+          bookmakers: 'bet365,pinnacle,fanduel'
+        },
         headers: {
           'X-RapidAPI-Key': '1f4e95c341mshc74fe6926419f36p1b12a1jsn299cea60b005',
-          'X-RapidAPI-Host': 'baseball4.p.rapidapi.com'
+          'X-RapidAPI-Host': 'odds-api1.p.rapidapi.com'
         }
       };
 
       try {
         const response = await axios.request(options);
         console.log(response.data);
-        setGames(response.data);
+
+        // Parsing the response to consolidate game details by match ID
+        const gamesObject = response.data;
+        const consolidatedGames = {};
+
+        Object.values(gamesObject).forEach(game => {
+          if (!consolidatedGames[game.matchid]) {
+            consolidatedGames[game.matchid] = {
+              match: game.match,
+              date: game.date,
+              time: game.time,
+              home_team: game.home_team,
+              away_team: game.away_team,
+              odds: []
+            };
+          }
+          consolidatedGames[game.matchid].odds.push({
+            bookie: game.bookie,
+            home_2Way: game.home_2Way,
+            away_2Way: game.away_2Way,
+            match_url: game.match_url
+          });
+        });
+
+        setGames(Object.values(consolidatedGames));
       } catch (error) {
-        console.error('Error fetching games:', error);
+        console.error(error);
       }
     };
 
@@ -53,19 +80,28 @@ function LandingPage() {
 
       <div className="grid">
         <div className="grid-col grid-col_8">
-        <div>
-        <h2>MLB Games on 2024-05-20</h2>
-        {games.length > 0 ? (
-          games.map((game) => (
-            <div key={game.gamePk}>
-              <h3>{game.teams.away.team.name} vs {game.teams.home.team.name}</h3>
-              <p>{game.venue.name}</p>
-            </div>
-          ))
-        ) : (
-          <p>Loading games...</p>
-        )}
-      </div>
+          <div>
+            <h2>MLB Games on 2024-05-21</h2>
+            {games.length > 0 ? (
+              games.map((game, index) => (
+                <div key={index}>
+                  <h3>{game.home_team} vs {game.away_team}</h3>
+                  <p>Date: {game.date}</p>
+                  <p>Time: {game.time}</p>
+                  {game.odds.map((odd, oddIndex) => (
+                    <div key={oddIndex}>
+                      <p>Bookmaker: {odd.bookie}</p>
+                      <p>Home Odds: {odd.home_2Way}</p>
+                      <p>Away Odds: {odd.away_2Way}</p>
+                      <a href={odd.match_url} target="_blank" rel="noopener noreferrer">View Match</a>
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              <p>Loading games...</p>
+            )}
+          </div>
         </div>
         <div className="grid-col grid-col_4">
           <RegisterForm />
